@@ -2,9 +2,55 @@
 
 Cortex is a friendly command-line tool for safe Windows Active Directory administration.
 
+This README is intended to give you a clear picture of what the project is today, how it is designed, and where it is going.
+
+## Why Cortex
+
+Active Directory administration often involves repetitive commands, environment-specific details, and tools that are difficult to automate safely. Cortex is being built to make those workflows easier to understand and safer to run:
+
+- **Friendly:** clear explanations, useful next steps, and human-readable terminal output.
+- **Safe by default:** read-only diagnostics first, with preview and confirmation planned for future changes.
+- **Scriptable:** one-shot commands and stable JSON output for automation.
+- **Least privilege:** Cortex uses the current Windows security context and does not manage or store credentials.
+- **Windows-native:** designed for administrators working with Windows, PowerShell, and Active Directory.
+
 ## Current status
 
 The initial CLI foundation is in place. It currently provides help, version reporting, environment diagnostics, and an interactive session. Active Directory operations are not implemented yet.
+
+This is an early-stage project, not a replacement for Active Directory Users and Computers or a production-ready directory automation platform. The current implementation is intentionally focused on a small, testable foundation before write operations are introduced.
+
+## Who this is for
+
+- **Systems administrators and help desk teams** who want clearer command-line diagnostics.
+- **Junior administrators** who benefit from guardrails and actionable error messages.
+- **Experienced administrators** who want repeatable commands that can be used in scripts.
+- **Developers and contributors** interested in Go CLIs, PowerShell integration, Windows administration, and testable system boundaries.
+
+## Quick start
+
+### Prerequisites
+
+- Windows.
+- Go 1.23 or newer to build from source.
+- PowerShell available on the host.
+- For domain information checks: a Windows security context with the appropriate domain access. RSAT and Active Directory access checks are part of the directory feature path.
+
+### Build and run
+
+```powershell
+go build -o cortex.exe ./cmd/cortex
+.\cortex.exe --help
+.\cortex.exe doctor
+```
+
+For a release-ready Windows archive, see [Releases](#releases).
+
+## Safety and privacy
+
+Cortex is designed around the current Windows user context. It does not prompt for, accept, or store Active Directory credentials, and it does not embed organization-specific domain names, OU names, or secrets.
+
+The current commands are diagnostic and read-only. Future directory-changing commands are intended to preview their actions and require an explicit confirmation or `--apply` before making changes. Those capabilities are not available yet, so the current status above should be treated as the source of truth.
 
 ## Build
 
@@ -76,3 +122,34 @@ To create the same archive locally from PowerShell:
 ```powershell
 .\scripts\build\release.ps1 -Version v0.1.0
 ```
+
+## Development
+
+The project is a Go CLI with a PowerShell-backed boundary for Windows directory operations. The main areas are:
+
+- [`cmd/cortex`](./cmd/cortex) — application entry point and dependency wiring.
+- [`internal/cli`](./internal/cli) — commands, flags, prompts, sessions, and output.
+- [`internal/directory`](./internal/directory) — the directory contract and implementations.
+- [`internal/powershell`](./internal/powershell) — process execution, timeouts, and result handling.
+- [`scripts/build`](./scripts/build) — repeatable local release packaging.
+
+Run the same checks used by continuous integration:
+
+```powershell
+go test ./...
+go vet ./...
+```
+
+Before contributing, please keep changes focused, add tests for new behavior, and document user-facing changes. The project’s design direction and boundaries are described in [`VISION.md`](./VISION.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md), and [`CONTRAINTS.md`](./CONTRAINTS.md).
+
+## Roadmap
+
+The broader direction is to add read-only directory discovery first, followed by guarded write operations with previews, confirmation, and audit logging. Planned areas include:
+
+1. Configuration and domain discovery.
+2. Read-only OU and directory queries.
+3. Interactive selection and completion.
+4. Preview-first OU and group changes.
+5. Audit logging and broader integration coverage.
+
+Features are added incrementally; planned items are subject to change and should not be read as currently supported commands.
