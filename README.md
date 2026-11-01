@@ -4,6 +4,8 @@ Cortex is a friendly command-line tool for safe Windows Active Directory adminis
 
 This README is intended to give you a clear picture of what the project is today, how it is designed, and where it is going.
 
+> **Development status:** Cortex is actively being developed. Features, commands, and design details may change as the project progresses.
+
 ## Why Cortex
 
 Active Directory administration often involves repetitive commands, environment-specific details, and tools that are difficult to automate safely. Cortex is being built to make those workflows easier to understand and safer to run:
