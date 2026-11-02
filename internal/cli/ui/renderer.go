@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"cortex/internal/directory"
+	domaincontracts "cortex/internal/features/domain/contracts"
+	whoamicontacts "cortex/internal/features/whoami/contracts"
 )
 
 type Renderer struct {
@@ -86,7 +87,7 @@ func (r Renderer) Doctor(checks []Check, failures int) error {
 	return nil
 }
 
-func (r Renderer) DomainInfo(report directory.DomainInfoReport) error {
+func (r Renderer) DomainInfo(report domaincontracts.DomainInfoReport) error {
 	if r.JSON {
 		var info *ErrorInfo
 		if report.Error != nil {
@@ -134,7 +135,7 @@ func (r Renderer) DomainInfo(report directory.DomainInfoReport) error {
 	return nil
 }
 
-func (r Renderer) Identity(report directory.IdentityReport) error {
+func (r Renderer) Identity(report whoamicontacts.IdentityReport) error {
 	if r.JSON {
 		var info *ErrorInfo
 		if report.Error != nil {
@@ -178,7 +179,7 @@ func (r Renderer) Identity(report directory.IdentityReport) error {
 	return nil
 }
 
-func (r Renderer) DomainControllers(report directory.DomainControllersReport) error {
+func (r Renderer) DomainControllers(report domaincontracts.DomainControllersReport) error {
 	if r.JSON {
 		var info *ErrorInfo
 		if report.Error != nil {

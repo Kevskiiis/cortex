@@ -75,22 +75,6 @@ func prompt() string {
 	return ui.StyleText(ui.TitleStyle, ui.ColorEnabled(os.Stdout), "cortex> ")
 }
 
-func completer() readline.AutoCompleter {
-	return readline.NewPrefixCompleter(
-		readline.PcItem("doctor"),
-		readline.PcItem("domain",
-			readline.PcItem("info"),
-			readline.PcItem("controllers"),
-		),
-		readline.PcItem("version"),
-		readline.PcItem("whoami"),
-		readline.PcItem("help"),
-		readline.PcItem("--help"),
-		readline.PcItem("--version"),
-		readline.PcItem("quit"),
-	)
-}
-
 func historyPath() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {

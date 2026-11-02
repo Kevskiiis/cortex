@@ -10,11 +10,8 @@ import (
 
 func TestProcessFailureClassifiesTimeout(t *testing.T) {
 	report := processFailure(&ps.ProcessError{Err: context.DeadlineExceeded})
-	if report.Status != "command_timeout" {
-		t.Fatalf("status = %q, want command_timeout", report.Status)
-	}
-	if report.Error == nil || report.Error.Code != "command_timeout" {
-		t.Fatalf("error = %#v, want command_timeout", report.Error)
+	if report.Status != "command_timeout" || report.Error == nil || report.Error.Code != "command_timeout" {
+		t.Fatalf("report = %#v, want command_timeout", report)
 	}
 }
 

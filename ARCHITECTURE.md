@@ -10,11 +10,13 @@ cortex/
 │   └── cortex/                      # The downloadable Cortex CLI application
 │
 ├── internal/
-│   ├── cli/                         # Commands, prompts, flags, and human/JSON output
+│   ├── cli/                         # Root execution, parsing, sessions, and shared output
 │   │   └── ui/                      # Shared styles, renderers, status, and tables
-│   ├── directory/                   # Active Directory contracts and implementations
-│   │   ├── powershell/              # PowerShell-backed operations and action scripts
-│   │   └── fake/                    # In-memory directory implementation for tests
+│   ├── features/                    # Feature-owned vertical slices
+│   │   ├── doctor/                  # Local prerequisite diagnostics
+│   │   ├── version/                 # Version command
+│   │   ├── whoami/                  # Identity command, contract, provider, and script
+│   │   └── domain/                  # Domain parent and info/controllers leaves
 │   ├── config/                      # Configuration loading and validation
 │   ├── safety/                      # Preview, confirmation, and protected OU rules
 │   ├── audit/                       # Audit event creation and persistence
@@ -38,19 +40,17 @@ cortex/
 ## Ownership boundaries
 
 - `cmd/cortex` is the application entry point. It should contain only startup and dependency wiring.
-- `internal/cli` owns command definitions, prompts, flags, exit codes, and output formatting.
+- `internal/cli` owns root execution, argument parsing, sessions, and shared output handling.
 - `internal/cli/ui` owns terminal styling, human-readable formatting, JSON envelopes, and terminal capability decisions.
-- `internal/directory` owns the directory contract and keeps Active Directory details behind a small boundary.
-- `internal/directory` also owns the local identity contract used by `whoami`; identity discovery does not require Active Directory access.
-- `internal/directory/powershell` implements directory operations through PowerShell and colocates action scripts that must be embedded with their provider.
-- `internal/directory/powershell/domain_info.go` adapts the read-only `domain info` action and classifies expected PowerShell failures.
-- `internal/directory/powershell/domain_controllers.go` adapts the read-only `domain controllers` action; its script returns controller records as one structured JSON object.
-- `internal/directory/fake` provides a predictable backend for unit tests without a real domain.
+- `internal/features/<feature>` owns a feature's parent command, leaf commands, contracts, models, providers, scripts, and tests.
+- A parent feature command only registers its leaves; each leaf owns its flags, validation, provider call, rendering, and exit status.
+- `internal/features/domain/info` and `internal/features/domain/controllers` are independent leaves that share only domain contracts and common infrastructure.
+- `internal/features/*/providers/powershell` adapts feature contracts to embedded PowerShell actions.
 - `internal/config` loads and validates environment-specific configuration without hardcoding any organization values.
 - `internal/safety` enforces preview-by-default behavior, confirmations, protected OUs, and input rules.
 - `internal/audit` records actions without storing credentials or other sensitive data.
 - `internal/powershell` owns process execution, timeouts, cancellation, and the JSON result protocol.
-- `internal/powershell/scripts` contains built-in PowerShell scripts that are embedded into the executable for normal downloads.
+- Feature providers colocate the PowerShell scripts they embed, keeping each action beside its contract adapter.
 - `internal/powershell/runner.go` executes embedded scripts through temporary files with typed process arguments and a 30-second default timeout.
 - `test/integration` contains tests that verify behavior across multiple internal packages.
 - `docs` contains documentation that helps users install, configure, operate, and contribute to Cortex.
@@ -59,4 +59,4 @@ cortex/
 
 ## Design direction
 
-Cortex starts as a small modular monolith. The CLI, safety rules, configuration, audit logging, and directory access are separated by responsibility, but remain in one executable. New abstractions such as LDAP, plugins, caching, or interactive sessions should be added only when the corresponding feature is implemented.
+Cortex is a modular monolith organized by vertical feature slices. Shared infrastructure remains horizontal, but feature commands should not import concrete providers from other features. New capabilities such as OUs, groups, SMB/NFS shares, and GPOs should add new feature packages rather than expanding a central directory interface or command file.

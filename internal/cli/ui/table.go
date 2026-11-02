@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"cortex/internal/directory"
+	domaincontracts "cortex/internal/features/domain/contracts"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -46,7 +46,7 @@ func RenderKeyValue(key, value string, color bool) string {
 	return fmt.Sprintf("  %s %s", StyleText(MutedStyle, color, key+":"), value)
 }
 
-func RenderDomainControllers(controllers []directory.DomainController, color bool, width int) string {
+func RenderDomainControllers(controllers []domaincontracts.DomainController, color bool, width int) string {
 	if len(controllers) == 0 {
 		return "  No domain controllers found."
 	}
@@ -87,7 +87,7 @@ func RenderDomainControllers(controllers []directory.DomainController, color boo
 	return strings.Join(lines, "\n")
 }
 
-func controllerState(controller directory.DomainController) string {
+func controllerState(controller domaincontracts.DomainController) string {
 	state := "disabled"
 	if controller.Enabled {
 		state = "enabled"

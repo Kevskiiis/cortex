@@ -1,4 +1,4 @@
-package directory
+package contracts
 
 import "context"
 
@@ -11,6 +11,20 @@ type IdentityReport struct {
 	Info   *IdentityInfo     `json:"info,omitempty"`
 	Checks []DiagnosticCheck `json:"checks"`
 	Error  *DiagnosticError  `json:"error,omitempty"`
+}
+
+type DiagnosticCheck struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Detail string `json:"detail"`
+	OK     bool   `json:"ok"`
+}
+
+type DiagnosticError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Detail  string `json:"detail,omitempty"`
+	Next    string `json:"next,omitempty"`
 }
 
 type IdentityInfo struct {

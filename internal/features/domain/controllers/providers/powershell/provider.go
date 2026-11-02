@@ -8,25 +8,28 @@ import (
 	"fmt"
 	"strings"
 
-	"cortex/internal/directory"
+	"cortex/internal/features/domain/contracts"
 	psexec "cortex/internal/powershell"
 )
 
 //go:embed domain_controllers.ps1
 var domainControllersScript []byte
 
-type domainControllersScriptResult struct {
+type Provider struct{ Runner psexec.Runner }
+
+func NewProvider() Provider { return Provider{Runner: psexec.NewRunner()} }
+
+type scriptResult struct {
 	Status      string                       `json:"status"`
-	Controllers []directory.DomainController `json:"controllers"`
-	Checks      []directory.DiagnosticCheck  `json:"checks"`
-	Error       *directory.DiagnosticError   `json:"error,omitempty"`
+	Controllers []contracts.DomainController `json:"controllers"`
+	Checks      []contracts.DiagnosticCheck  `json:"checks"`
+	Error       *contracts.DiagnosticError   `json:"error,omitempty"`
 }
 
-func (p Provider) DomainControllers(ctx context.Context, request directory.DomainControllersRequest) (directory.DomainControllersReport, error) {
+func (p Provider) DomainControllers(ctx context.Context, request contracts.DomainControllersRequest) (contracts.DomainControllersReport, error) {
 	if request.Domain != "" && request.Server != "" {
-		return directory.DomainControllersReport{}, errors.New("domain and server targets are mutually exclusive")
+		return contracts.DomainControllersReport{}, errors.New("domain and server targets are mutually exclusive")
 	}
-
 	args := make([]string, 0, 4)
 	if request.Domain != "" {
 		args = append(args, "-Domain", request.Domain)
@@ -34,37 +37,19 @@ func (p Provider) DomainControllers(ctx context.Context, request directory.Domai
 	if request.Server != "" {
 		args = append(args, "-Server", request.Server)
 	}
-
 	output, err := p.Runner.Run(ctx, domainControllersScript, args)
 	if err != nil {
-		return controllersProcessFailure(err), nil
+		return processFailure(err), nil
 	}
-
-	var result domainControllersScriptResult
+	var result scriptResult
 	if err := json.Unmarshal(output, &result); err != nil {
-		return directory.DomainControllersReport{
-			Status: "invalid_result",
-			Error: &directory.DiagnosticError{
-				Code:    "invalid_result",
-				Message: "PowerShell returned an invalid domain-controller result.",
-				Detail:  err.Error(),
-				Next:    "Run the command again and use --json for diagnostic details.",
-			},
-		}, nil
+		return contracts.DomainControllersReport{Status: "invalid_result", Error: &contracts.DiagnosticError{Code: "invalid_result", Message: "PowerShell returned an invalid domain-controller result.", Detail: err.Error(), Next: "Run the command again and use --json for diagnostic details."}}, nil
 	}
-	return directory.DomainControllersReport{
-		Status:      result.Status,
-		Controllers: result.Controllers,
-		Checks:      result.Checks,
-		Error:       result.Error,
-	}, nil
+	return contracts.DomainControllersReport{Status: result.Status, Controllers: result.Controllers, Checks: result.Checks, Error: result.Error}, nil
 }
 
-func controllersProcessFailure(err error) directory.DomainControllersReport {
-	status := "unexpected_error"
-	code := "unexpected_error"
-	next := "Run the command again."
-	detail := ""
+func processFailure(err error) contracts.DomainControllersReport {
+	status, code, next, detail := "unexpected_error", "unexpected_error", "Run the command again.", ""
 	var processErr *psexec.ProcessError
 	if errors.As(err, &processErr) {
 		detail = processErr.Error()
@@ -84,13 +69,5 @@ func controllersProcessFailure(err error) directory.DomainControllersReport {
 			status, code, next = "domain_unreachable", "domain_unreachable", "Connect to the domain network or VPN and try again."
 		}
 	}
-	return directory.DomainControllersReport{
-		Status: status,
-		Error: &directory.DiagnosticError{
-			Code:    code,
-			Message: fmt.Sprintf("Cortex could not list domain controllers: %s.", status),
-			Detail:  detail,
-			Next:    next,
-		},
-	}
+	return contracts.DomainControllersReport{Status: status, Error: &contracts.DiagnosticError{Code: code, Message: fmt.Sprintf("Cortex could not list domain controllers: %s.", status), Detail: detail, Next: next}}
 }

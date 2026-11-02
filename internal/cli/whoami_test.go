@@ -8,23 +8,23 @@ import (
 	"strings"
 	"testing"
 
-	"cortex/internal/directory"
+	"cortex/internal/features/whoami/contracts"
 )
 
 type fakeIdentityProvider struct {
-	report directory.IdentityReport
+	report contracts.IdentityReport
 	err    error
 }
 
-func (p fakeIdentityProvider) WhoAmI(context.Context) (directory.IdentityReport, error) {
+func (p fakeIdentityProvider) WhoAmI(context.Context) (contracts.IdentityReport, error) {
 	return p.report, p.err
 }
 
 func TestWhoAmICommandRendersHumanResult(t *testing.T) {
-	provider := fakeIdentityProvider{report: directory.IdentityReport{
+	provider := fakeIdentityProvider{report: contracts.IdentityReport{
 		Status: "domain_identity",
-		Checks: []directory.DiagnosticCheck{{Name: "Identity", Status: "Ready", Detail: "CONTOSO\\jsmith", OK: true}},
-		Info: &directory.IdentityInfo{
+		Checks: []contracts.DiagnosticCheck{{Name: "Identity", Status: "Ready", Detail: "CONTOSO\\jsmith", OK: true}},
+		Info: &contracts.IdentityInfo{
 			Name:           `CONTOSO\jsmith`,
 			SID:            "S-1-5-21-123",
 			Authentication: "domain",
@@ -50,9 +50,9 @@ func TestWhoAmICommandRendersHumanResult(t *testing.T) {
 }
 
 func TestWhoAmICommandRendersJSONResult(t *testing.T) {
-	provider := fakeIdentityProvider{report: directory.IdentityReport{
+	provider := fakeIdentityProvider{report: contracts.IdentityReport{
 		Status: "local_identity",
-		Info:   &directory.IdentityInfo{Name: `WORKSTATION\jsmith`, Classification: "local_identity"},
+		Info:   &contracts.IdentityInfo{Name: `WORKSTATION\jsmith`, Classification: "local_identity"},
 	}}
 	var out, errOut bytes.Buffer
 	root := NewRootCommandWithProviders(DefaultVersion, &fakeDomainInfoProvider{}, provider)
@@ -73,9 +73,9 @@ func TestWhoAmICommandRendersJSONResult(t *testing.T) {
 }
 
 func TestWhoAmICommandRendersFailureAndReturnsError(t *testing.T) {
-	provider := fakeIdentityProvider{report: directory.IdentityReport{
+	provider := fakeIdentityProvider{report: contracts.IdentityReport{
 		Status: "identity_unavailable",
-		Error: &directory.DiagnosticError{
+		Error: &contracts.DiagnosticError{
 			Code:    "identity_unavailable",
 			Message: "Windows did not provide a current user identity.",
 		},

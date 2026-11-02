@@ -151,7 +151,7 @@ The project is a Go CLI with a PowerShell-backed boundary for Windows directory 
 
 - [`cmd/cortex`](./cmd/cortex) — application entry point and dependency wiring.
 - [`internal/cli`](./internal/cli) — commands, flags, prompts, sessions, and output.
-- [`internal/directory`](./internal/directory) — the directory contract and implementations.
+- [`internal/features`](./internal/features) — feature-owned commands, contracts, providers, scripts, and tests.
 - [`internal/powershell`](./internal/powershell) — process execution, timeouts, and result handling.
 - [`scripts/build`](./scripts/build) — repeatable local release packaging.
 

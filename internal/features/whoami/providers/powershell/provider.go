@@ -7,31 +7,39 @@ import (
 	"errors"
 	"strings"
 
-	"cortex/internal/directory"
+	"cortex/internal/features/whoami/contracts"
 	psexec "cortex/internal/powershell"
 )
 
 //go:embed identity.ps1
 var identityScript []byte
 
-type identityScriptResult struct {
-	Status string                      `json:"status"`
-	Info   *directory.IdentityInfo     `json:"info,omitempty"`
-	Checks []directory.DiagnosticCheck `json:"checks"`
-	Error  *directory.DiagnosticError  `json:"error,omitempty"`
+type Provider struct {
+	Runner psexec.Runner
 }
 
-func (p Provider) WhoAmI(ctx context.Context) (directory.IdentityReport, error) {
+func NewProvider() Provider {
+	return Provider{Runner: psexec.NewRunner()}
+}
+
+type scriptResult struct {
+	Status string                      `json:"status"`
+	Info   *contracts.IdentityInfo     `json:"info,omitempty"`
+	Checks []contracts.DiagnosticCheck `json:"checks"`
+	Error  *contracts.DiagnosticError  `json:"error,omitempty"`
+}
+
+func (p Provider) WhoAmI(ctx context.Context) (contracts.IdentityReport, error) {
 	output, err := p.Runner.Run(ctx, identityScript, nil)
 	if err != nil {
-		return identityProcessFailure(err), nil
+		return processFailure(err), nil
 	}
 
-	var result identityScriptResult
+	var result scriptResult
 	if err := json.Unmarshal(output, &result); err != nil {
-		return directory.IdentityReport{
+		return contracts.IdentityReport{
 			Status: "invalid_result",
-			Error: &directory.DiagnosticError{
+			Error: &contracts.DiagnosticError{
 				Code:    "invalid_result",
 				Message: "PowerShell returned an invalid identity result.",
 				Detail:  err.Error(),
@@ -39,10 +47,10 @@ func (p Provider) WhoAmI(ctx context.Context) (directory.IdentityReport, error) 
 			},
 		}, nil
 	}
-	return directory.IdentityReport{Status: result.Status, Info: result.Info, Checks: result.Checks, Error: result.Error}, nil
+	return contracts.IdentityReport{Status: result.Status, Info: result.Info, Checks: result.Checks, Error: result.Error}, nil
 }
 
-func identityProcessFailure(err error) directory.IdentityReport {
+func processFailure(err error) contracts.IdentityReport {
 	status := "unexpected_error"
 	code := "unexpected_error"
 	next := "Run the command again."
@@ -60,9 +68,9 @@ func identityProcessFailure(err error) directory.IdentityReport {
 			status, code, next = "powershell_unavailable", "powershell_unavailable", "Install Windows PowerShell 5.1 and try again."
 		}
 	}
-	return directory.IdentityReport{
+	return contracts.IdentityReport{
 		Status: status,
-		Error: &directory.DiagnosticError{
+		Error: &contracts.DiagnosticError{
 			Code:    code,
 			Message: "Cortex could not determine the current Windows identity.",
 			Detail:  detail,

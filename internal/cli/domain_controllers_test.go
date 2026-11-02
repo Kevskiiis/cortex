@@ -8,24 +8,24 @@ import (
 	"strings"
 	"testing"
 
-	"cortex/internal/directory"
+	"cortex/internal/features/domain/contracts"
 )
 
 type fakeDomainControllersProvider struct {
-	report  directory.DomainControllersReport
+	report  contracts.DomainControllersReport
 	err     error
-	request directory.DomainControllersRequest
+	request contracts.DomainControllersRequest
 }
 
-func (p *fakeDomainControllersProvider) DomainControllers(_ context.Context, request directory.DomainControllersRequest) (directory.DomainControllersReport, error) {
+func (p *fakeDomainControllersProvider) DomainControllers(_ context.Context, request contracts.DomainControllersRequest) (contracts.DomainControllersReport, error) {
 	p.request = request
 	return p.report, p.err
 }
 
 func TestDomainControllersCommandRendersHumanResultAndPassesTarget(t *testing.T) {
-	provider := &fakeDomainControllersProvider{report: directory.DomainControllersReport{
+	provider := &fakeDomainControllersProvider{report: contracts.DomainControllersReport{
 		Status: "ready",
-		Controllers: []directory.DomainController{{
+		Controllers: []contracts.DomainController{{
 			Name:            "DC01.contoso.com",
 			IPv4Address:     "10.0.0.10",
 			OperatingSystem: "Windows Server 2022",
@@ -55,9 +55,9 @@ func TestDomainControllersCommandRendersHumanResultAndPassesTarget(t *testing.T)
 }
 
 func TestDomainControllersCommandRendersJSON(t *testing.T) {
-	provider := &fakeDomainControllersProvider{report: directory.DomainControllersReport{
+	provider := &fakeDomainControllersProvider{report: contracts.DomainControllersReport{
 		Status:      "empty",
-		Controllers: []directory.DomainController{},
+		Controllers: []contracts.DomainController{},
 	}}
 	var out, errOut bytes.Buffer
 	root := NewRootCommandWithAllProviders(DefaultVersion, &fakeDomainInfoProvider{}, fakeIdentityProvider{}, provider)

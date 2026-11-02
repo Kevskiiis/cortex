@@ -8,25 +8,25 @@ import (
 	"strings"
 	"testing"
 
-	"cortex/internal/directory"
+	"cortex/internal/features/domain/contracts"
 )
 
 type fakeDomainInfoProvider struct {
-	report  directory.DomainInfoReport
+	report  contracts.DomainInfoReport
 	err     error
-	request directory.DomainInfoRequest
+	request contracts.DomainInfoRequest
 }
 
-func (p *fakeDomainInfoProvider) DomainInfo(_ context.Context, request directory.DomainInfoRequest) (directory.DomainInfoReport, error) {
+func (p *fakeDomainInfoProvider) DomainInfo(_ context.Context, request contracts.DomainInfoRequest) (contracts.DomainInfoReport, error) {
 	p.request = request
 	return p.report, p.err
 }
 
 func TestDomainInfoCommandRendersHumanResult(t *testing.T) {
-	provider := &fakeDomainInfoProvider{report: directory.DomainInfoReport{
+	provider := &fakeDomainInfoProvider{report: contracts.DomainInfoReport{
 		Status: "ready",
-		Checks: []directory.DiagnosticCheck{{Name: "Directory", Status: "Ready", Detail: "Query succeeded", OK: true}},
-		Info:   &directory.DomainInfo{DNSName: "corp.example.com", CurrentUser: "CORP\\admin"},
+		Checks: []contracts.DiagnosticCheck{{Name: "Directory", Status: "Ready", Detail: "Query succeeded", OK: true}},
+		Info:   &contracts.DomainInfo{DNSName: "corp.example.com", CurrentUser: "CORP\\admin"},
 	}}
 	var out, errOut bytes.Buffer
 	root := NewRootCommandWithProvider(DefaultVersion, provider)
@@ -48,7 +48,7 @@ func TestDomainInfoCommandRendersHumanResult(t *testing.T) {
 }
 
 func TestDomainInfoCommandRendersJSONResult(t *testing.T) {
-	provider := &fakeDomainInfoProvider{report: directory.DomainInfoReport{Status: "partial"}}
+	provider := &fakeDomainInfoProvider{report: contracts.DomainInfoReport{Status: "partial"}}
 	var out, errOut bytes.Buffer
 	root := NewRootCommandWithProvider(DefaultVersion, provider)
 	root.SetArgs([]string{"--json", "domain", "info", "--server", "dc01.corp.example.com"})
