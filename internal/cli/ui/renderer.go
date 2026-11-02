@@ -134,6 +134,90 @@ func (r Renderer) DomainInfo(report directory.DomainInfoReport) error {
 	return nil
 }
 
+func (r Renderer) Identity(report directory.IdentityReport) error {
+	if r.JSON {
+		var info *ErrorInfo
+		if report.Error != nil {
+			info = &ErrorInfo{
+				Code:    report.Error.Code,
+				Message: report.Error.Message,
+				Detail:  report.Error.Detail,
+				Next:    report.Error.Next,
+			}
+		}
+		return r.writeEnvelope(Envelope{OK: report.Successful(), Data: report, Error: info})
+	}
+
+	fmt.Fprintln(r.Out, StyleText(TitleStyle, r.Color, "Cortex identity"))
+	if len(report.Checks) > 0 {
+		checks := make([]Check, 0, len(report.Checks))
+		for _, check := range report.Checks {
+			checks = append(checks, Check{Name: check.Name, Status: check.Status, Detail: check.Detail, OK: check.OK})
+		}
+		fmt.Fprintln(r.Out, RenderChecks(checks, r.Color, TerminalWidth(r.Out)))
+	}
+	if report.Info != nil {
+		fmt.Fprintln(r.Out)
+		fmt.Fprintln(r.Out, StyleText(MutedStyle, r.Color, "Identity details"))
+		fmt.Fprintln(r.Out, RenderKeyValue("User", report.Info.Name, r.Color))
+		fmt.Fprintln(r.Out, RenderKeyValue("SID", report.Info.SID, r.Color))
+		fmt.Fprintln(r.Out, RenderKeyValue("Authentication", report.Info.Authentication, r.Color))
+		fmt.Fprintln(r.Out, RenderKeyValue("Computer", report.Info.ComputerName, r.Color))
+		fmt.Fprintln(r.Out, RenderKeyValue("Domain", report.Info.Domain, r.Color))
+		fmt.Fprintln(r.Out, RenderKeyValue("Domain joined", fmt.Sprintf("%t", report.Info.DomainJoined), r.Color))
+	}
+	if report.Error != nil {
+		fmt.Fprintln(r.Out)
+		fmt.Fprintln(r.Out, StyleText(ErrorStyle, r.Color, report.Error.Message))
+		if report.Error.Next != "" {
+			fmt.Fprintln(r.Out, StyleText(WarningStyle, r.Color, "Next: "+report.Error.Next))
+		}
+		return nil
+	}
+	fmt.Fprintln(r.Out, StyleText(SuccessStyle, r.Color, "Identity information retrieved successfully."))
+	return nil
+}
+
+func (r Renderer) DomainControllers(report directory.DomainControllersReport) error {
+	if r.JSON {
+		var info *ErrorInfo
+		if report.Error != nil {
+			info = &ErrorInfo{
+				Code:    report.Error.Code,
+				Message: report.Error.Message,
+				Detail:  report.Error.Detail,
+				Next:    report.Error.Next,
+			}
+		}
+		return r.writeEnvelope(Envelope{OK: report.Successful(), Data: report, Error: info})
+	}
+
+	fmt.Fprintln(r.Out, StyleText(TitleStyle, r.Color, "Cortex domain controllers"))
+	if len(report.Checks) > 0 {
+		checks := make([]Check, 0, len(report.Checks))
+		for _, check := range report.Checks {
+			checks = append(checks, Check{Name: check.Name, Status: check.Status, Detail: check.Detail, OK: check.OK})
+		}
+		fmt.Fprintln(r.Out, RenderChecks(checks, r.Color, TerminalWidth(r.Out)))
+	}
+	fmt.Fprintln(r.Out)
+	fmt.Fprintln(r.Out, RenderDomainControllers(report.Controllers, r.Color, TerminalWidth(r.Out)))
+	if report.Error != nil {
+		fmt.Fprintln(r.Out)
+		fmt.Fprintln(r.Out, StyleText(ErrorStyle, r.Color, report.Error.Message))
+		if report.Error.Next != "" {
+			fmt.Fprintln(r.Out, StyleText(WarningStyle, r.Color, "Next: "+report.Error.Next))
+		}
+		return nil
+	}
+	if report.Status == "empty" {
+		fmt.Fprintln(r.Out, StyleText(WarningStyle, r.Color, "No domain controllers were returned."))
+	} else {
+		fmt.Fprintln(r.Out, StyleText(SuccessStyle, r.Color, fmt.Sprintf("Found %d domain controller(s).", len(report.Controllers))))
+	}
+	return nil
+}
+
 func (r Renderer) writeEnvelope(envelope Envelope) error {
 	return json.NewEncoder(r.Out).Encode(envelope)
 }

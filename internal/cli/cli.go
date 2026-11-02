@@ -57,10 +57,23 @@ func (e *ReportedError) Unwrap() error {
 }
 
 func NewRootCommand(version string) *cobra.Command {
-	return NewRootCommandWithProvider(version, directorypowershell.NewProvider())
+	provider := directorypowershell.NewProvider()
+	return NewRootCommandWithAllProviders(version, provider, provider, provider)
 }
 
 func NewRootCommandWithProvider(version string, provider directory.DomainInfoProvider) *cobra.Command {
+	identityProvider, ok := provider.(directory.IdentityProvider)
+	if !ok {
+		identityProvider = directorypowershell.NewProvider()
+	}
+	return NewRootCommandWithAllProviders(version, provider, identityProvider, directorypowershell.NewProvider())
+}
+
+func NewRootCommandWithProviders(version string, provider directory.DomainInfoProvider, identityProvider directory.IdentityProvider) *cobra.Command {
+	return NewRootCommandWithAllProviders(version, provider, identityProvider, directorypowershell.NewProvider())
+}
+
+func NewRootCommandWithAllProviders(version string, provider directory.DomainInfoProvider, identityProvider directory.IdentityProvider, controllerProvider directory.DomainControllersProvider) *cobra.Command {
 	if version == "" {
 		version = DefaultVersion
 	}
@@ -81,8 +94,30 @@ func NewRootCommandWithProvider(version string, provider directory.DomainInfoPro
 	}
 	root.PersistentFlags().BoolVarP(&versionMode, "version", "v", false, "Print the Cortex version")
 	root.PersistentFlags().BoolVar(&jsonMode, "json", false, "Emit machine-readable JSON")
-	root.AddCommand(newVersionCommand(version, &jsonMode), newDoctorCommand(&jsonMode), newDomainCommand(&jsonMode, provider))
+	root.AddCommand(newVersionCommand(version, &jsonMode), newDoctorCommand(&jsonMode), newDomainCommand(&jsonMode, provider, controllerProvider), newWhoAmICommand(&jsonMode, identityProvider))
 	return root
+}
+
+func newWhoAmICommand(jsonMode *bool, provider directory.IdentityProvider) *cobra.Command {
+	return &cobra.Command{
+		Use:   "whoami",
+		Short: "Show the Windows identity running Cortex",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			report, err := provider.WhoAmI(cmd.Context())
+			if err != nil {
+				return err
+			}
+			_ = ui.NewRenderer(cmd.OutOrStdout(), *jsonMode).Identity(report)
+			if !report.Successful() {
+				if report.Error != nil {
+					return &ReportedError{Err: errors.New(report.Error.Message)}
+				}
+				return &ReportedError{Err: errors.New("identity information could not be retrieved")}
+			}
+			return nil
+		},
+	}
 }
 
 func newVersionCommand(version string, jsonMode *bool) *cobra.Command {
@@ -112,7 +147,7 @@ func newDoctorCommand(jsonMode *bool) *cobra.Command {
 	}
 }
 
-func newDomainCommand(jsonMode *bool, provider directory.DomainInfoProvider) *cobra.Command {
+func newDomainCommand(jsonMode *bool, provider directory.DomainInfoProvider, controllerProvider directory.DomainControllersProvider) *cobra.Command {
 	domainCommand := &cobra.Command{
 		Use:   "domain",
 		Short: "Inspect the current Active Directory domain",
@@ -147,6 +182,37 @@ func newDomainCommand(jsonMode *bool, provider directory.DomainInfoProvider) *co
 	domainInfoCommand.Flags().StringVar(&domainTarget, "domain", "", "Query a DNS domain name")
 	domainInfoCommand.Flags().StringVar(&serverTarget, "server", "", "Query through a domain controller")
 	domainCommand.AddCommand(domainInfoCommand)
+
+	var controllersDomainTarget string
+	var controllersServerTarget string
+	domainControllersCommand := &cobra.Command{
+		Use:   "controllers",
+		Short: "List domain controllers and their status",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if controllersDomainTarget != "" && controllersServerTarget != "" {
+				return errors.New("--domain and --server cannot be used together")
+			}
+			report, err := controllerProvider.DomainControllers(cmd.Context(), directory.DomainControllersRequest{
+				Domain: controllersDomainTarget,
+				Server: controllersServerTarget,
+			})
+			if err != nil {
+				return err
+			}
+			_ = ui.NewRenderer(cmd.OutOrStdout(), *jsonMode).DomainControllers(report)
+			if !report.Successful() {
+				if report.Error != nil {
+					return &ReportedError{Err: errors.New(report.Error.Message)}
+				}
+				return &ReportedError{Err: errors.New("domain controllers could not be retrieved")}
+			}
+			return nil
+		},
+	}
+	domainControllersCommand.Flags().StringVar(&controllersDomainTarget, "domain", "", "Query controllers for a DNS domain name")
+	domainControllersCommand.Flags().StringVar(&controllersServerTarget, "server", "", "Query through a domain controller")
+	domainCommand.AddCommand(domainControllersCommand)
 	return domainCommand
 }
 

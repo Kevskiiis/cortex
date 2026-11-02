@@ -41,8 +41,10 @@ cortex/
 - `internal/cli` owns command definitions, prompts, flags, exit codes, and output formatting.
 - `internal/cli/ui` owns terminal styling, human-readable formatting, JSON envelopes, and terminal capability decisions.
 - `internal/directory` owns the directory contract and keeps Active Directory details behind a small boundary.
+- `internal/directory` also owns the local identity contract used by `whoami`; identity discovery does not require Active Directory access.
 - `internal/directory/powershell` implements directory operations through PowerShell and colocates action scripts that must be embedded with their provider.
 - `internal/directory/powershell/domain_info.go` adapts the read-only `domain info` action and classifies expected PowerShell failures.
+- `internal/directory/powershell/domain_controllers.go` adapts the read-only `domain controllers` action; its script returns controller records as one structured JSON object.
 - `internal/directory/fake` provides a predictable backend for unit tests without a real domain.
 - `internal/config` loads and validates environment-specific configuration without hardcoding any organization values.
 - `internal/safety` enforces preview-by-default behavior, confirmations, protected OUs, and input rules.

@@ -18,7 +18,7 @@ Active Directory administration often involves repetitive commands, environment-
 
 ## Current status
 
-The initial CLI foundation is in place. It currently provides help, version reporting, environment diagnostics, and an interactive session. Active Directory operations are not implemented yet.
+The initial CLI foundation is in place. It currently provides help, version reporting, local identity diagnostics, domain diagnostics, and an interactive session. Active Directory write operations are not implemented yet.
 
 This is an early-stage project, not a replacement for Active Directory Users and Computers or a production-ready directory automation platform. The current implementation is intentionally focused on a small, testable foundation before write operations are introduced.
 
@@ -72,8 +72,14 @@ cortex doctor
 cortex domain info
 cortex domain info --domain corp.example.com
 cortex domain info --server dc01.corp.example.com
+cortex domain controllers
+cortex domain controllers --domain corp.example.com
+cortex domain controllers --server dc01.corp.example.com
+cortex whoami
 cortex --json doctor
 cortex --json domain info
+cortex --json domain controllers
+cortex --json whoami
 ```
 
 `cortex doctor` currently checks the operating system and PowerShell availability. RSAT and Active Directory access checks will be added with the directory features.
@@ -93,6 +99,12 @@ The `--json` flag emits a stable machine-readable envelope:
 
 JSON output never includes ANSI color codes or human-readable status text.
 
+## Identity information
+
+`whoami` reports the Windows security context running Cortex. It is local and read-only, so it works without Active Directory connectivity or RSAT. It reports the current user name, SID, authentication type, computer name, domain or workgroup, and domain-joined status.
+
+The command never queries group membership, prompts for credentials, stores credentials, or changes the system.
+
 ## Domain information
 
 `domain info` is read-only and uses the current Windows security token. It never prompts for, stores, or accepts credentials. The command checks domain membership, the current identity, PowerShell and RSAT availability, the secure channel, and domain-controller access.
@@ -101,6 +113,12 @@ If the machine is not domain joined, the current user is not domain authenticate
 
 The `--domain` and `--server` options are mutually exclusive. Both require the current Windows token to have access to the requested target.
 
+## Domain controllers
+
+`domain controllers` lists readable domain controllers and reports their hostname, IPv4 address, site, operating system, enabled state, writable state, and global-catalog status. It requires a domain-joined Windows computer, RSAT Active Directory tools, and directory read access.
+
+The command is read-only and uses the current Windows token. `--domain` selects a DNS domain and `--server` selects the domain controller used for the query; the options are mutually exclusive. If no controllers are returned, Cortex reports an empty successful result rather than treating it as malformed output.
+
 ## Interactive session
 
 Run `cortex` from an interactive terminal:
@@ -108,6 +126,8 @@ Run `cortex` from an interactive terminal:
 ```text
 cortex> doctor
 cortex> version
+cortex> whoami
+cortex> domain controllers
 cortex> quit
 ```
 
